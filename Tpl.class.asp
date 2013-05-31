@@ -59,44 +59,50 @@ class AspTpl
 	end sub
 	'==================================================
 	'解析模板变量
+	'功能主要是解析模板中的全局变量
 	'==================================================
 	private Function jiexivar(str)
 		a=p_var_list.keys
 		p_reg.Pattern =  p_var_l & "(\S*?)" & p_var_r 
 		set matches=p_reg.execute(str)
+		'遍历在字符串中找到的模板变量
 		for each a in matches
+			c=isFiltervar(a)
+			if isarray(c) then
+			'处理有过滤器的情况
+					str=replace(str,a,filtervar(p_var_list(c(0)),c(1),c(2)))
+			else
+			'没有过滤器
+					temval=p_var_list(a.submatches(0))
+					if isarray(temval) then '过滤去除数组变量
+						str=replace(str,a,"<pre style='color:red;'>'"&a.submatches(0)&" ' is Array </pre>")
+					else
+						str=replace(str,a,temval)
+					end if
+			end if 
+		next
+		jiexivar=str
+	end Function
+	'==================================================
+	'判断变量有否有过滤器
+	'返回值：有过滤器的情况下返回一个数据 包含变量键名，函数名，参数，否则返回false
+	'==================================================
+	private Function isFiltervar(a)
 			'分析是否有变量过滤器start 
 			p_reg.Pattern =  p_var_l &  "(\S*?)\|(\S*?)\=(\S*?)"  & p_var_r 
 			set Ms=p_reg.execute(a)
 			'处理有过滤器的情况
 			if Ms.count>0 then
-				keyname=Ms(0).SubMatches(0)'变量键名
-				funcname=Ms(0).SubMatches(1)'函数名
-				param=Ms(0).SubMatches(2)'调用参数
-				str=replace(str,a,filtervar(p_var_list(keyname),funcname,param))
-			'没有过滤器
+				redim arr(3) 
+				arr(0)=Ms(0).SubMatches(0)'变量键名
+				arr(1)=Ms(0).SubMatches(1)'函数名
+				arr(2)=Ms(0).SubMatches(2)'调用参数
+				isFiltervar=arr
 			else
-				temval=p_var_list(a.submatches(0))
-				if isarray(temval) then '过滤去除数组变量
-					str=replace(str,a,"<pre style='color:red;'>'"&a.submatches(0)&" ' is Array </pre>")
-				else
-					str=replace(str,a,temval)
-				end if
+				isFiltervar=false
 			end if
-			'分析是否有变量过滤器end 
-			
-		next
-'		'遍历变量键值
-'		for each i in p_var_list.keys
-'			p_reg.Pattern =  p_var_l & i & p_var_r 
-'			if isarray(p_var_list(i)) then '过滤去除数组变量
-'				str=p_reg.replace(str,"<pre style='color:red;'>'"&i&" ' is Array </pre>")
-'			else
-'				str=p_reg.replace(str,p_var_list(i))
-'			end if
-'		next
-		jiexivar=str
-	end Function
+			set ms=nothing
+	end function
 	'==================================================
 	'解析if标签
 	'==================================================	
@@ -126,15 +132,55 @@ class AspTpl
 				temvar=getTagParam(Match.SubMatches(0),"var")
 				temarr=p_var_list(temname)
 				str1=""
-				if isarray(temarr) then 
-					for each a in temarr
-					p_reg.Pattern=p_var_l & temvar & p_var_r
-					str1=str1&p_reg.replace(Match.SubMatches(1),a)
+			if isarray(temarr) then
+				'循环foreach中间的内容 
+				for each a in temarr
+					'查找循环变量
+					p_reg.Pattern =  p_var_l & "(\S*?)" & p_var_r 
+					set ms=p_reg.execute(Match.SubMatches(1))
+				'	str1=Match.SubMatches(1)'str1是foreach里面包含的内容
+					'遍历在字符串中找到的模板变量并判断是否有过滤器
+					for each e in ms
+						c=isFiltervar(e)
+						if isarray(c) then
+						'处理有过滤器的情况
+								'判断 是不是循环变量
+								if c(0)=temvar then
+									str1=str1&replace(Match.SubMatches(1),e,filtervar(a,c(1),c(2)))
+								else
+									str1=str1&replace(Match.SubMatches(1),e,filtervar(p_var_list(c(0)),c(1),c(2)))
+								end if
+								
+						else
+						'没有过滤器
+								if c(0)=temvar then
+									str1=str1&replace(Match.SubMatches(1),e,temval)
+								else
+									str1=str1&replace(Match.SubMatches(1),e,p_var_list(e.submatches(0)))
+								end if
+						end if 
 					next
-				end if
-				str=replace(str,Match,str1)
+					
+				next
+					str=replace(str,Match,str1)
+			end if				
+				
 		next
-		foreachTag=str
+		foreachTag=str					
+					
+					
+					
+'					for each d in ms
+'						c=isFiltervar(d)
+'						if isarray(c) then
+'							'str1=str1&replace(Match.SubMatches(1),d,)
+'							str1=replace(str1,d,filtervar(a,c(1),c(2)))
+'						else
+'						
+'						end if
+'					next
+				
+
 	End Function
 	'==================================================
 	'给模板赋值
