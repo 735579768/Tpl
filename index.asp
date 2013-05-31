@@ -1,9 +1,15 @@
+<%@LANGUAGE="VBSCRIPT" CODEPAGE="65001"%>
 <!--#include file="tpl.class.asp"-->
+<!--#include file="lang.asp"-->
 <%
 set tpl=New Asptpl
-arr=array("a","b")
+'foreach标签测试
+arr=array("aaaaaaaaaa","bbbbbbbbb")
+tpl.assign "error",errstr
+
 tpl.assign "a","aval"
 tpl.assign "arr",arr
+
 tpl.display("index.html")
 'p_var_list.add "b","a"
 'p_var_list.add "b","bbb"
