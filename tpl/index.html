@@ -7,7 +7,8 @@
 
 <body>
 {$arr}<br />
-{$a|left=3}888
+{$a|left=10}888
+{$b|empty=默认输出空值}
 <!--{if 1<0 }-->
 if 1 is true
 {$success}
@@ -16,10 +17,15 @@ if 1 is true
 <!--{/if}-->
 
 
+<!--{if 1>0}-->
+if 语句
+<!--{/if}-->
+
+
 
 
 <!--{foreach name="arr" var="var"}-->
-{$var|left=1}
+{$var|left=20}
 <!--{/foreach}-->
 
 

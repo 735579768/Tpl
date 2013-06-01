@@ -1,4 +1,11 @@
 <%
+'===================================================
+'===author 赵克立
+'===blog:http://zhaokeli.com/
+'===version.v1.0.0
+'===asp template class
+'===运行模式类似于smarty不过没有smary强大
+'===================================================
 class AspTpl
 	private p_err
 	private p_var_l
@@ -106,8 +113,24 @@ class AspTpl
 	'==================================================
 	'解析if标签
 	'==================================================	
+	private Function iftag(str)
+		regtag=p_tag_l & "if\s+?(.*?)\s*?"& p_tag_r  &"([\s\S]*?)"& p_tag_l & "/if"& p_tag_r
+		p_reg.Pattern=regtag
+		Set Matches = p_reg.Execute(str)
+		For Each Match in Matches  
+			if eval(jiexivar(Match.SubMatches(0))) then
+				str=replace(str,Match,jiexivar(Match.SubMatches(1)))
+			else
+				str=replace(str,Match,"")			
+			end if
+		next
+		ifTag=str
+	End function
+	'==================================================
+	'解析ifelse标签
+	'==================================================	
 	private Function ifElseTag(str)
-		regtag=p_tag_l & "if\s+?(.+?)\s+?"& p_tag_r  &"([\s\S]*?)"& p_tag_l & "else"& p_tag_r & "([\s\S]*?)"& p_tag_l & "/if"& p_tag_r
+		regtag=p_tag_l & "if\s+?(.*?)\s*?"& p_tag_r  &"([\s\S]*?)"& p_tag_l & "else"& p_tag_r & "([\s\S]*?)"& p_tag_l & "/if"& p_tag_r
 		p_reg.Pattern=regtag
 		'p_tpl_content=p_reg.execute(p_tpl_content,"it is if ")
 		Set Matches = p_reg.Execute(str)
@@ -167,20 +190,6 @@ class AspTpl
 				
 		next
 		foreachTag=str					
-					
-					
-					
-'					for each d in ms
-'						c=isFiltervar(d)
-'						if isarray(c) then
-'							'str1=str1&replace(Match.SubMatches(1),d,)
-'							str1=replace(str1,d,filtervar(a,c(1),c(2)))
-'						else
-'						
-'						end if
-'					next
-				
-
 	End Function
 	'==================================================
 	'给模板赋值
@@ -232,11 +241,14 @@ class AspTpl
 	'解析模板文件
 	'==================================================
 	public Function display(tplfile)
+		'这里解析的顺序不能错
 		p_tpl_file=tplfile
 		checkTplDirAndFile()'载入模板
 		p_tpl_content=includefile(p_tpl_content)'包含文件
 		p_tpl_content=ifElseTag(p_tpl_content)
+		p_tpl_content=ifTag(p_tpl_content)
 		p_tpl_content=foreachTag(p_tpl_content)
+		p_tpl_content=looptag(p_tpl_content)
 		p_tpl_content=jiexivar(p_tpl_content)
 		response.Write p_tpl_content
 	end Function
@@ -255,6 +267,7 @@ class AspTpl
 	private Function filterVar(val,funcname,param)
 			Select Case funcname
 				case "left" filterVar=left(val,Cint(param))
+				case "empty" if val="" then:filtervar=param:end if
 				case else 	filtervar=val
 			end select
 	End Function
@@ -273,10 +286,10 @@ class AspTpl
 		set ms=nothing
 		getTagParam=str1
 	End Function
-	'------------------------------------------------- 
+	'=====================================================
 	'函数名称:ReadTextFile 
 	'作用:利用AdoDb.Stream对象来读取UTF-8格式的文本文件 
-	'---------------------------------------------------- 
+	'====================================================
 	function ReadFromTextFile (FileUrl,CharSet) 
 		dim str 
 		set stm=server.CreateObject("adodb.stream") 
@@ -290,10 +303,10 @@ class AspTpl
 		set stm=nothing 
 		ReadFromTextFile=str 
 	end function 
-	'------------------------------------------------- 
+	'================================================== 
 	'函数名称:WriteToTextFile 
 	'作用:利用AdoDb.Stream对象来写入UTF-8格式的文本文件 
-	'---------------------------------------------------- 
+	'===================================================
 	Sub WriteToTextFile (FileUrl,byval Str,CharSet) 
 		set stm=server.CreateObject("adodb.stream") 
 		stm.Type=2 '以本模式读取 
@@ -306,5 +319,18 @@ class AspTpl
 		stm.Close 
 		set stm=nothing 
 	end Sub 
+	'================================================== 
+	'函数名称:looptag 
+	' 
+	'===================================================
+	private function looptag(str)
+		p_reg.Pattern=p_tag_l & "loop([\s\S]*?)" & p_tag_r&"([\s\S]*?)" & p_tag_l & "/loop" &p_tag_r
+		set matches=p_reg.execute(str)
+		echo matches.count
+		for each match in matches
+			
+		next
+		looptag=str
+	End Function
 end class
 %>

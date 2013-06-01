@@ -4,10 +4,11 @@
 <%
 set tpl=New Asptpl
 'foreach标签测试
-arr=array("aaaaaaaaaa","bbbbbbbbb")
+arr=array("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","bbbbbbbbb")
 tpl.assign "error",errstr
 
-tpl.assign "a","aval"
+tpl.assign "a","avalaaaaaaaaaaaaaaaaaaa"
+tpl.assign "b",""
 tpl.assign "arr",arr
 
 tpl.display("index.html")
