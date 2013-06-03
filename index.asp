@@ -1,10 +1,22 @@
 <%@LANGUAGE="VBSCRIPT" CODEPAGE="65001"%>
-<!--#include file="tpl.class.asp"-->
+<!--#include file="Tpl.class.asp"-->
+<!--#include file="db.class.asp"-->
 <!--#include file="lang.asp"-->
 <%
 set tpl=New Asptpl
+set db=new AccessDb
 
+set rs=db.query("select * from kl_archives")
 '变量测试
+rsarr=db.rstoarr(rs)
+if isarray(rsarr) then echo "is array"
+echo ubound(rsarr)
+for each a in rsarr
+	if isobject(a) then
+		if a.Exists("arctitle") then echo a("arctitle")&"<br>"
+	end if
+next
+
 tpl.assign "a","a123456789"
 tpl.assign "b",""'默认输出测试
 
@@ -27,7 +39,7 @@ tpl.assign "obj",kvarr
 
 '组合一个键值对象数组
 arr=array(kvarr,kvarr)
-tpl.assign "loopobjarr",arr
+tpl.assign "loopobjarr",rsarr
 
 tpl.display("index.html")
 'p_var_list.add "b","a"

@@ -454,6 +454,7 @@ class AspTpl
 				temvar=getTagParam(Match.SubMatches(0),"var")'循环时用的变量对象
 				for each obj in temobjarr
 						restr=Match.SubMatches(1)'loop的内容
+						if not isobject(obj) then exit for
 						'set obj=temobj(objkey)
 						for each k in obj.keys'循环对象obj中元素
 							zhvar=p_var_l & temvar& "." & k &"(.*?)"& p_var_r
