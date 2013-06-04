@@ -60,7 +60,7 @@ class AspTpl
 				p_tpl_content = ReadFromTextFile(p_tpl_dir &"/"& p_tpl_File,p_charset)'oFile.ReadAll
 				'oFile.Close
 			else
-				echoErr "<b>ASPTemplate Error: File [" & server.mappath(p_tpl_dir &"/"& p_tpl_File) & "] does not exists!</b><br>"
+				echoErr 1,"<b>ASPTemplate Error: File [" & server.mappath(p_tpl_dir &"/"& p_tpl_File) & "] does not exists!</b><br>"
 			end if
 	end sub
 	'==================================================
@@ -102,10 +102,10 @@ class AspTpl
 							if isobject(p_var_list(temobj)) then
 								str=replace(str,a,p_var_list(temobj)(objkey))
 							else
-								echo 1,"键"&temobj&"的值不是的对象,在输出"&temobj&"."&temkey&"时出错"	
+								echoerr 1,"键"&temobj&"的值不是对象,在输出"&temobj&"."&temkey&"时出错"	
 							end if
 						else
-							echo 1,"不存在键为"&temobj&"的对象"			
+							echoerr 1,"不存在键为"&temobj&"的对象"			
 						end if
 						
 					else
@@ -385,15 +385,11 @@ class AspTpl
 		else
 			 haveinclude=true
 		end if
-	
 	end function
-	'==================================================
-	'解析模板文件
-	'==================================================
-	public Function display(tplfile)
-		'这里解析的顺序不能错
-		p_tpl_file=tplfile
-		checkTplDirAndFile()'载入模板
+	'================================================
+	'解析模板内容
+	'=================================================
+	private Function jiexiTpl()
 		p_tpl_content=includefile(p_tpl_content)'包含文件
 		p_tpl_content=ifElseTag(p_tpl_content)
 		p_tpl_content=ifTag(p_tpl_content)
@@ -402,14 +398,50 @@ class AspTpl
 		p_tpl_content=jiexivar(p_tpl_content)
 		p_tpl_content=jiexiShortTag(p_tpl_content)
 		p_tpl_content=Endjiexi(p_tpl_content)
-		response.Write p_tpl_content
+		jiexiTpl=p_tpl_content
+	end function
+	'=================================================
+	'解析字符串模板
+	'==================================================
+	public function show(str)
+			p_tpl_content=str
+			str=jiexiTpl()
+			response.Write str
+	end function
+	'==================================================
+	'解析模板文件
+	'==================================================
+	public Function display(tplfile)
+		'这里解析的顺序不能错
+		p_tpl_file=tplfile
+		checkTplDirAndFile()'载入模板
+		str=jiexiTpl()
+		response.Write str
 	end Function
 	'==================================================
 	'输出错误
 	'==================================================
-	private sub echoErr(str)
-		response.Write str
-	end sub
+	'==================================
+	'echoErr函数
+	'功能：把不同的错误级别输出
+	'==================================
+	Function echoErr(errnum,errstr)
+		select case errnum
+			case 0:'致命错误
+				kl_err="Error Description:"&err.description
+				response.Write errstr&"<br>"
+				response.Write kl_err
+				response.End()	
+			case 1:'一般错误
+				kl_err="Error Description:"&err.description
+				response.Write errstr&"<br>"
+				response.Write kl_err
+			case else:'其它
+				response.Write errstr&"<br>"
+				response.Write("")
+		end select
+		err.clear
+	End Function
 	'===============================================================================
 	'变量过滤器
 	'@param tplvars模板变量将要赋值的字符串
@@ -488,12 +520,13 @@ class AspTpl
 	' 
 	'===================================================
 	private function looptag(str)
+		on error resume next
 		p_reg.Pattern=p_tag_l & "loop(.*?)" & p_tag_r&"([\s\S]*?)" & p_tag_l & "/loop" &p_tag_r
 		set matches=p_reg.execute(str)
 		for each match in matches
 				temname=getTagParam(Match.SubMatches(0),"name")
 				iteration=getTagParam(Match.SubMatches(0),"iteration")
-				if not isarray(p_var_list(temname)) then :echoerr("error: var: ' "&temname&" ' it is no array!")
+				'if not isarray(p_var_list(temname)) then :echoerr 1,"error: var: ' "&temname&" ' it is no array!"
 				temobjarr=p_var_list(temname)'对象数组
 				temvar=getTagParam(Match.SubMatches(0),"var")'循环时用的变量对象
 				str1=""'处理过的内容

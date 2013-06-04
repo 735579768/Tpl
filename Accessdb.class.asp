@@ -11,7 +11,7 @@
 'const db_path="data/#aspadmindata.mdb"
 const db_pwd=""
 Class Accessdb
-	private kl_conn
+	public kl_conn
 	private kl_rs
 	private kl_sql
 	private kl_err
@@ -56,9 +56,7 @@ Class Accessdb
 	'rsToArr函数
 	'功能：把记录集转成键值对数组
 	'==================================
-	Function rsToArr(rss)
-		on error resume next
-		err.clear
+	Function rsToArr(byref rss)
 		num=rss.recordcount
 		redim klvalarr(num)
 		if num>0 then
@@ -71,9 +69,6 @@ Class Accessdb
 				set kl_keval=nothing
 				rss.movenext
 			next
-		end if
-		if err.number<>0 then 
-			echoerr 0,"记录集转成键值数组时出错！"
 		end if
 		rsToArr=klvalarr
 	End Function
