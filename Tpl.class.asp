@@ -68,6 +68,7 @@ class AspTpl
 	'功能主要是解析模板中的全局变量
 	'==================================================
 	private Function jiexivar(str)
+
 		a=p_var_list.keys
 		p_reg.Pattern =  p_var_l & "(\S*?)" & p_var_r 
 		set matches=p_reg.execute(str)
@@ -76,14 +77,45 @@ class AspTpl
 			c=isHaveFilteFunc(a)
 			if isarray(c) then
 			'处理有过滤器的情况
-					str=replace(str,a,filtervar(p_var_list(c(0)),c(1),c(2)))
+					'判断是不是对象，也就是有键值的情况
+					num=instr(c(0),".")						
+					if num>0 then
+						'取出对象 和键
+						temobj=mid(c(0),1,num-1)
+						objkey=mid(c(0),num+1)
+						if p_var_list.exists(temobj) then
+						str=replace(str,a,filtervar(p_var_list(temobj)(objkey),c(1),c(2)))
+						end if
+					else
+						str=replace(str,a,filtervar(p_var_list(c(0)),c(1),c(2)))
+					end if
 			else
 			'没有过滤器
-					temval=p_var_list(a.submatches(0))
-					if isarray(temval) then '过滤去除数组变量
-						str=replace(str,a,"<pre style='color:red;'>'"&a.submatches(0)&" ' is Array </pre>")
+					'判断是不是对象，也就是有键值的情况
+					num=instr(a.submatches(0),".")
+								
+					if num>0 then
+						'取出对象 和键
+						temobj=mid(a.submatches(0),1,num-1)
+						objkey=mid(a.submatches(0),num+1)
+						if p_var_list.Exists(temobj) then
+							if isobject(p_var_list(temobj)) then
+								str=replace(str,a,p_var_list(temobj)(objkey))
+							else
+								echo 1,"键"&temobj&"的值不是的对象,在输出"&temobj&"."&temkey&"时出错"	
+							end if
+						else
+							echo 1,"不存在键为"&temobj&"的对象"			
+						end if
+						
 					else
-						str=replace(str,a,temval)
+					'不是对象，普通变量的输出
+						temval=p_var_list(a.submatches(0))
+						if isarray(temval) then '过滤去除数组变量
+							str=replace(str,a,"<pre style='color:red;'>'"&a.submatches(0)&" ' is Array </pre>")
+						else
+							str=replace(str,a,temval)
+						end if
 					end if
 			end if 
 		next
@@ -123,6 +155,7 @@ class AspTpl
 		For Each Match in Matches  
 			if eval(jiexivar(Match.SubMatches(0))) then
 				str=replace(str,Match,jiexivar(Match.SubMatches(1)))
+				str=jiexiShortTag(str)
 			else
 				str=replace(str,Match,"")			
 			end if
@@ -140,8 +173,10 @@ class AspTpl
 		For Each Match in Matches  
 			if eval(jiexivar(Match.SubMatches(0))) then
 				str=replace(str,Match,jiexivar(Match.SubMatches(1)))
+				str=jiexiShortTag(str)
 			else
 				str=replace(str,Match,jiexivar(Match.SubMatches(2)))
+				str=jiexiShortTag(str)
 			end if
 		next
 		ifElseTag=str
@@ -168,10 +203,12 @@ class AspTpl
 				'如果变量是数组
 			if isarray(temarr) then
 				str1=jiexiforeacharr(Match.submatches(1),temarr,temvar)
+				str1=jiexiShortTag(str1)
 				str=replace(str,Match,str1)
 			elseif isobject(temarr) then
 				'如果变量是对象
 				str1=jiexiforeachobj(Match.submatches(1),temarr,temvar)
+				str1=jiexiShortTag(str1)
 				str=replace(str,Match,str1)
 			else
 				'循环变量没有定义时直接输出空
@@ -295,14 +332,19 @@ class AspTpl
 			
 	End sub
 	'==================================================
-	'给模板赋值数组
+	'把数组组合成键值对象
 	'==================================================
-	public Function getKeyValue(key,keyarr,valuearr)
+	public Function getKeyVal(keyarr,valuearr)
 			set kvarr = server.CreateObject("Scripting.Dictionary")
-			for i=0 to ubound(keyarr)
-				kvarr(keyarr(i))=valuearr(i)
-			next
-			set getKeyValue=kvarr
+			if isarray(keyarr) and isarray(valuearr) then
+				for i=0 to ubound(keyarr)
+					kvarr(keyarr(i))=valuearr(i)
+				next
+			else
+				echoerr 0,"组合格式错误!"
+				exit function
+			end if
+			set getKeyVal=kvarr
 			set kvarr=nothing
 	End Function
 	'===============================================================================
@@ -358,6 +400,7 @@ class AspTpl
 		p_tpl_content=foreachTag(p_tpl_content)
 		p_tpl_content=looptag(p_tpl_content)
 		p_tpl_content=jiexivar(p_tpl_content)
+		p_tpl_content=jiexiShortTag(p_tpl_content)
 		p_tpl_content=Endjiexi(p_tpl_content)
 		response.Write p_tpl_content
 	end Function
@@ -449,31 +492,64 @@ class AspTpl
 		set matches=p_reg.execute(str)
 		for each match in matches
 				temname=getTagParam(Match.SubMatches(0),"name")
+				iteration=getTagParam(Match.SubMatches(0),"iteration")
 				if not isarray(p_var_list(temname)) then :echoerr("error: var: ' "&temname&" ' it is no array!")
 				temobjarr=p_var_list(temname)'对象数组
 				temvar=getTagParam(Match.SubMatches(0),"var")'循环时用的变量对象
-				for each obj in temobjarr
+				str1=""'处理过的内容
+				for i=0 to ubound(temobjarr)-1
 						restr=Match.SubMatches(1)'loop的内容
-						if not isobject(obj) then exit for
+						if not isobject(temobjarr(i)) then exit for
 						'set obj=temobj(objkey)
-						for each k in obj.keys'循环对象obj中元素
+						'替换迭代变量
+							p_reg.Pattern =p_var_l &iteration& p_var_r
+							restr=p_reg.replace(restr,i+1)
+						'替换键值变量
+						for each k in temobjarr(i).keys'循环对象obj中元素并替换成值
 							zhvar=p_var_l & temvar& "." & k &"(.*?)"& p_var_r
 							p_reg.Pattern = zhvar
 							set temm=p_reg.execute(restr)
 							for each m in temm
 								c=isHaveFilteFunc(m)
 								if isarray(c) then
-									restr=p_reg.replace(restr,filtervar(obj(k),c(1),c(2)) )
+									restr=p_reg.replace(restr,filtervar(temobjarr(i)(k),c(1),c(2)) )
 								else
-									restr=p_reg.replace(restr,obj(k))
+									restr=p_reg.replace(restr,temobjarr(i)(k))
 								end if
 							next
 						next
+						restr=jiexiShortTag(restr)'处理短标签
 						str1=str1&restr
 				next
 				str=replace(str,match,str1)
 		next
 		looptag=str
 	End Function
+	'======================================
+	'对语法中的短标签进行处理，新加的短标签也加在这里
+	'======================================
+	private Function jiexiShortTag(str)
+		'处理eq短标签
+		jiexiShortTag=eqtag(str)
+	end Function
+	'==========================
+	'模板eq短标签替换
+	'============================
+	private function eqtag(str)
+		Set p_eqreg = New RegExp 
+		p_eqreg.Pattern ="<eq([\s\S]*?)>([\s\S]*?)</eq>"
+		set eqm=p_eqreg.execute(str)
+		if eqm.count>0 then
+			for each m in eqm
+				if eval(m.submatches(0)) then
+					str=replace(str,m,m.submatches(1))
+				else
+					str=replace(str,m,"")
+				end if
+			next
+		end if
+		eqtag=str
+		set p_eqreg=nothing
+	end function
 end class
 %>

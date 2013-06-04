@@ -21,7 +21,7 @@ Class Accessdb
 	'功能：初始化数据
 	'==================================
 	Private Sub Class_Initialize()
-		connstr= "Provider=Microsoft.Jet.OLEDB.4.0;Data Source="&server.MapPath(db_path)&";Jet OLEDB:Database Password="&db_pwd&";"
+		connstr= "Provider=Microsoft.Jet.OLEDB.4.0;Data Source="&server.MapPath(Sql_Data)&";Jet OLEDB:Database Password="&db_pwd&";"
 		Set kl_conn = Server.CreateObject("ADODB.Connection")
 		Set kl_sqlkey = server.CreateObject("Scripting.Dictionary")
 		kl_Conn.Open connstr
@@ -69,6 +69,7 @@ Class Accessdb
 				next
 				set klvalarr(i)=kl_keyval
 				set kl_keval=nothing
+				rss.movenext
 			next
 		end if
 		if err.number<>0 then 
@@ -97,22 +98,28 @@ Class Accessdb
 		kl_sqlkey("fild")=str
 		set fild=Me
 	End Function
+	Function  order(str)
+		kl_sqlkey("order")=str
+		set order=Me
+	End Function
 	'==================================
 	'sel函数
 	'功能：查询数据
 	'==================================
 	Function sel()
 		'on error resume next
-		dim top ,fild,where,jin,table
+		dim top ,fild,where,jin,table,order
 		if kl_sqlkey.Exists("top") then top=cstr(kl_sqlkey("top"))
 		if kl_sqlkey.Exists("fild") then fild=cstr(kl_sqlkey("fild"))
 		if kl_sqlkey.Exists("where") then where="and " &cstr(kl_sqlkey("where"))
 		if kl_sqlkey.Exists("jin") then jin=cstr(kl_sqlkey("jin"))
 		if kl_sqlkey.Exists("table") then table=cstr(kl_sqlkey("table"))
+		if kl_sqlkey.Exists("order") then order=cstr(kl_sqlkey("order"))
 		if table="" then call echoerr(0,"数据表不能为空")
 		if fild="" then fild="*"
 		if jin<>"" then jin="inner join "&jin
-		kl_sql="select "&top&" "&fild&" from "&table &" "& jin&" "&"where  1=1  "&where
+		if order<>"" then order=" order by "&order
+		kl_sql="select "&top&" "&fild&" from "&table &" "& jin&" "&"where  1=1  "&where&" "&order
 		set sel=query("")
 		kl_sqlkey.removeAll()
 	End Function
@@ -138,6 +145,8 @@ Class Accessdb
 		end select
 		err.clear
 	End Function
+	Function getlastsql()
+		getlastsql=kl_sql
+	end function
 End Class
-%>
 %>

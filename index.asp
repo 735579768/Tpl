@@ -7,6 +7,10 @@ on error goto 0
 set tpl=New Asptpl
 set db=new AccessDb
 
+a=array("title")
+b=array("网站首页")
+set page=tpl.getkeyvalue(a,b)
+tpl.assign "page",page
 set rs=db.query("select * from kl_archives")
 
 '连贯操作查询
@@ -34,7 +38,7 @@ tpl.assign "arrr",arr
 '组合键值对象
 key=array("key1","key2","key3")
 val=array("5","2222222","3")
-set kvarr=tpl.getkeyvalue ("kv",key,val)
+set kvarr=tpl.getkeyvalue (key,val)
 
 
 '传递一个键值对象
