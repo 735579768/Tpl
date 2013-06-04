@@ -1,12 +1,16 @@
 <%@LANGUAGE="VBSCRIPT" CODEPAGE="65001"%>
 <!--#include file="Tpl.class.asp"-->
-<!--#include file="db.class.asp"-->
+<!--#include file="Accessdb.class.asp"-->
 <!--#include file="lang.asp"-->
 <%
+on error goto 0
 set tpl=New Asptpl
 set db=new AccessDb
 
 set rs=db.query("select * from kl_archives")
+
+'连贯操作查询
+db.table("kl_archives").where("id=45").fild("*").top("8").jin("kl_cats on kl_archives.cat_id=kl_cats.cat_id").sel
 '变量测试
 rsarr=db.rstoarr(rs)
 if isarray(rsarr) then echo "is array"
