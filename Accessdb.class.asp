@@ -8,7 +8,7 @@
 '版权声明：可以在任意作品中使用本程序代码，但请保留此版权信息。
 '          如果你修改了程序中的代码并得到更好的应用，请发送一份给我，谢谢。
 '==========================================================================
-const db_path="data/#aspadmindata.mdb"
+'const db_path="data/#aspadmindata.mdb"
 const db_pwd=""
 Class Accessdb
 	private kl_conn
