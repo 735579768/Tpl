@@ -56,19 +56,26 @@ Class Accessdb
 	'rsToArr函数
 	'功能：把记录集转成键值对数组
 	'==================================
-	Function rsToArr(byref rss)
+	Function rsToArr(rss)
+	on error resume next
+	err.clear
 		num=rss.recordcount
 		redim klvalarr(num)
 		if num>0 then
 			for i=0 to num-1 
-				set kl_keyval = server.CreateObject("Scripting.Dictionary")
-				for each a in rss.fields
-					kl_keyval(a.name)=rss(a.name)
-				next
-				set klvalarr(i)=kl_keyval
-				set kl_keval=nothing
-				rss.movenext
+				if not rss.eof then 	
+					set kl_keyval = server.CreateObject("Scripting.Dictionary")
+					for each a in rss.fields
+						kl_keyval(a.name)=rss(a.name)
+					next
+					set klvalarr(i)=kl_keyval
+					set kl_keval=nothing
+					rss.movenext
+				end if
 			next
+		end if
+		if err.number<>0 then
+			echo "rsToArr convert keyval error:"&err.description
 		end if
 		rsToArr=klvalarr
 	End Function

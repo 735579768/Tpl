@@ -7,6 +7,7 @@
 '===运行模式类似于smarty不过没有smary强大
 '===================================================
 class AspTpl
+	private debug
 	private p_err
 	private p_var_l
 	private p_var_r
@@ -20,6 +21,7 @@ class AspTpl
 	private p_charset
 	public  p_tpl_dir	
 	private sub class_Initialize
+		debug=true
 		p_charset="UTF-8"
 		p_var_l = "\{\$"
 		p_var_r = "\}"
@@ -68,7 +70,6 @@ class AspTpl
 	'功能主要是解析模板中的全局变量
 	'==================================================
 	private Function jiexivar(str)
-
 		a=p_var_list.keys
 		p_reg.Pattern =  p_var_l & "(\S*?)" & p_var_r 
 		set matches=p_reg.execute(str)
@@ -92,8 +93,7 @@ class AspTpl
 			else
 			'没有过滤器
 					'判断是不是对象，也就是有键值的情况
-					num=instr(a.submatches(0),".")
-								
+					num=instr(a.submatches(0),".")		
 					if num>0 then
 						'取出对象 和键
 						temobj=mid(a.submatches(0),1,num-1)
@@ -324,12 +324,15 @@ class AspTpl
 	'给模板赋值
 	'==================================================
 	public sub assign(key,val)
+			if  p_var_list.Exists(key) then p_var_list.Remove(key)
 			if isobject(val) then
 				set p_var_list(key)=val
 			else
 				p_var_list(key)=val
 			end if
-			
+		if err.number<>0 then
+			echo err.description
+		end if
 	End sub
 	'==================================================
 	'把数组组合成键值对象
@@ -395,8 +398,8 @@ class AspTpl
 		p_tpl_content=ifTag(p_tpl_content)
 		p_tpl_content=foreachTag(p_tpl_content)
 		p_tpl_content=looptag(p_tpl_content)
-		p_tpl_content=jiexivar(p_tpl_content)
 		p_tpl_content=jiexiShortTag(p_tpl_content)
+		p_tpl_content=jiexivar(p_tpl_content)
 		p_tpl_content=Endjiexi(p_tpl_content)
 		jiexiTpl=p_tpl_content
 	end function
@@ -426,20 +429,22 @@ class AspTpl
 	'功能：把不同的错误级别输出
 	'==================================
 	Function echoErr(errnum,errstr)
-		select case errnum
-			case 0:'致命错误
-				kl_err="Error Description:"&err.description
-				response.Write errstr&"<br>"
-				response.Write kl_err
-				response.End()	
-			case 1:'一般错误
-				kl_err="Error Description:"&err.description
-				response.Write errstr&"<br>"
-				response.Write kl_err
-			case else:'其它
-				response.Write errstr&"<br>"
-				response.Write("")
-		end select
+		if debug then
+			select case errnum
+				case 0:'致命错误
+					kl_err="Error Description:"&err.description
+					response.Write errstr&"<br>"
+					response.Write kl_err&"<br>"
+					response.End()	
+				case 1:'一般错误
+					kl_err="Error Description:"&err.description
+					response.Write errstr&"<br>"
+					response.Write kl_err&"<br>"
+				case else:'其它
+					response.Write errstr&"<br>"
+					response.Write("<br>")
+			end select
+		end if
 		err.clear
 	End Function
 	'===============================================================================
@@ -450,7 +455,14 @@ class AspTpl
 	'===============================================================================	
 	private Function filterVar(val,funcname,param)
 			Select Case funcname
-				case "left" filterVar=left(val,Cint(param))
+				case "left" 
+						set fireg=new regExp
+						fireg.IgnoreCase = True
+						fireg.Global = True
+						fireg.pattern="<.*?>|\s*|\r*\n\s*\r*\n"
+						val=fireg.replace(val,"")
+						set fireg=nothing
+						filterVar=left(val,Cint(param))
 				case "empty" if val="" then:filtervar=param:end if
 				case else 	filtervar=val
 			end select
@@ -545,12 +557,13 @@ class AspTpl
 							for each m in temm
 								c=isHaveFilteFunc(m)
 								if isarray(c) then
-									restr=p_reg.replace(restr,filtervar(temobjarr(i)(k),c(1),c(2)) )
+									restr=replace(restr,m,filtervar(temobjarr(i)(k),c(1),c(2)) )
 								else
-									restr=p_reg.replace(restr,temobjarr(i)(k))
+									restr=replace(restr,m,temobjarr(i)(k))
 								end if
 							next
 						next
+						restr=jiexivar(restr)'在解析短标签前把里面的全局变量解析成数据
 						restr=jiexiShortTag(restr)'处理短标签
 						str1=str1&restr
 				next
@@ -563,7 +576,9 @@ class AspTpl
 	'======================================
 	private Function jiexiShortTag(str)
 		'处理eq短标签
+		str=cattag(str)
 		jiexiShortTag=eqtag(str)
+		
 	end Function
 	'==========================
 	'模板eq短标签替换
@@ -571,6 +586,8 @@ class AspTpl
 	private function eqtag(str)
 		Set p_eqreg = New RegExp 
 		p_eqreg.Pattern ="<eq([\s\S]*?)>([\s\S]*?)</eq>"
+		p_eqreg.IgnoreCase = True
+		p_eqreg.Global = True
 		set eqm=p_eqreg.execute(str)
 		if eqm.count>0 then
 			for each m in eqm
@@ -583,6 +600,32 @@ class AspTpl
 		end if
 		eqtag=str
 		set p_eqreg=nothing
+	end function
+	'==========================================================================================
+	'自定义从数据库查询的标签
+	'=========================================================================================
+	private function cattag(str)
+		str1=""
+		Set catreg = New RegExp 
+		catreg.IgnoreCase = True
+		catreg.Global = True
+		catreg.Pattern ="<cat([\s\S]*?)>([\s\S]*?)</cat>"
+		set eqm=catreg.execute(str)
+		if eqm.count>0 then
+			for each m in eqm		
+				temparam=getTagParam(m.SubMatches(0),"id")
+				str1=m.submatches(1)
+				set catrs=db.table("kl_cats").top("1").where("cat_id="&temparam).sel()
+					for each a in catrs.fields
+						catreg.Pattern =p_var_l&a.name&p_var_r
+						str1=catreg.replace(str1,catrs(a.name)&"")
+					next 
+				set catrs=nothing
+				str=replace(str,m,str1)
+			next
+		end if
+		set catreg=nothing
+		cattag=str
 	end function
 end class
 %>
