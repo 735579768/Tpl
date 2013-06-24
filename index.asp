@@ -7,6 +7,51 @@ on error goto 0
 set tpl=New Asptpl
 set db=new AccessDb
 
+'打开新数据库
+		connstr= "Provider=Microsoft.Jet.OLEDB.4.0;Data Source="&server.MapPath("data/gjnew.mdb")&";Jet OLEDB:Database Password="&db_pwd&";"
+		Set conn = Server.CreateObject("ADODB.Connection")
+		conn.Open connstr
+
+set rs=db.table("wh_info").where("btypeid=2").sel()
+do while not rs.eof
+
+		set rss=server.CreateObject("adodb.recordset")
+		rss.open "select * from kl_archives",conn,1,3
+		rss.addnew
+		'导出新闻
+
+		rss("arctitle")=rs("title")&""
+		rss("arccontent")=rs("content")&""
+		rss("arcdescr")=left(rs("content")&"",30)
+		rss("cat_id")=59
+		rss("type_id")=1
+		rss("arcsource")=rs("nfrom")&""
+		rss("archits")=rs("hits")&""
+		rss("fbdate")=rs("date")&""
+		rss("uddate")=rs("date1")&""
+		rss("arcpic")=replace(rs("image")&"","/industry/Up/newsimage","/uploads/image/oldpic")
+		rss("arcauthor")=rs("writer")&""
+		rss("arctpl")="article_detail.html"
+		'===============================================
+		rss.update
+		rss.close
+		set rss=nothing
+
+	rs.movenext
+loop
+
+
+
+
+
+
+
+
+
+
+response.End()
+
+
 a=array("title")
 b=array("网站首页")
 set page=tpl.getkeyvalue(a,b)

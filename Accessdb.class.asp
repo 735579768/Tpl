@@ -8,7 +8,7 @@
 '版权声明：可以在任意作品中使用本程序代码，但请保留此版权信息。
 '          如果你修改了程序中的代码并得到更好的应用，请发送一份给我，谢谢。
 '==========================================================================
-'const db_path="data/#aspadmindata.mdb"
+const db_path="data/#aspadmindata.mdb"
 const db_pwd=""
 Class Accessdb
 	public kl_conn
@@ -21,7 +21,7 @@ Class Accessdb
 	'功能：初始化数据
 	'==================================
 	Private Sub Class_Initialize()
-		connstr= "Provider=Microsoft.Jet.OLEDB.4.0;Data Source="&server.MapPath(Sql_Data)&";Jet OLEDB:Database Password="&db_pwd&";"
+		connstr= "Provider=Microsoft.Jet.OLEDB.4.0;Data Source="&server.MapPath(db_path)&";Jet OLEDB:Database Password="&db_pwd&";"
 		Set kl_conn = Server.CreateObject("ADODB.Connection")
 		Set kl_sqlkey = server.CreateObject("Scripting.Dictionary")
 		kl_Conn.Open connstr
